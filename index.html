@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced PDF Reader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 95vh;
+        }
+
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-right: 20px;
+        }
+
+        .tagline {
+            font-style: italic;
+            color: #ecf0f1;
+            font-size: 0.9rem;
+        }
+
+        .nav-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .dropdown-btn {
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            border-radius: 5px;
+            padding: 10px;
+            top: 100%;
+            right: 0;
+            margin-top: 5px;
+        }
+
+        .nav-dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .option-group {
+            margin-bottom: 15px;
+        }
+
+        .option-group h3 {
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .option-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .option-btn {
+            padding: 6px 10px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .option-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .theme-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            position: relative;
+        }
+
+        .theme-option.active {
+            border-color: #2c3e50;
+            transform: scale(1.1);
+        }
+
+        .theme-option .color1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .theme-option .color2 {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 50%;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #34495e;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .upload-section {
+            margin-bottom: 25px;
+        }
+
+        .upload-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #2980b9;
+        }
+
+        .file-list {
+            margin-top: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .file-item {
+            padding: 10px;
+            background: #2c3e50;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-item:hover {
+            background: #1a252f;
+        }
+
+        .file-item.active {
+            background: #e74c3c;
+        }
+
+        .file-item .remove-btn {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .reader-container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .reader-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+        }
+
+        .control-btn {
+            padding: 8px 15px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .control-btn:hover {
+            background: #2980b9;
+        }
+
+        .control-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .page-info {
+            display: flex;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .reader-view {
+            flex: 1;
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 30px;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #extracted-text {
+            background: white;
+            padding: 30px;
+            border-radius: 5px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+            line-height: 1.6;
+            flex: 1;
+            margin: 0 auto;
+            transition: all 0.3s;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .text-content {
+            margin: 0 auto;
+            font-size: 1.1rem;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .text-content h1,
+        .text-content h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .text-content h1 {
+            font-size: 2.2rem;
+            color: #2c3e50;
+        }
+
+        .text-content h2 {
+            font-size: 1.8rem;
+            color: #3498db;
+            font-style: italic;
+        }
+
+        .text-content p {
+            margin-bottom: 1.2rem;
+            text-align: justify;
+        }
+
+        .no-pdf-message {
+            text-align: center;
+            color: #7f8c8d;
+            padding: 40px;
+        }
+
+        .no-pdf-message h2 {
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .width-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .width-slider {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .alignment-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .align-btn {
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .align-btn.active {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        /* Full screen mode */
+        .fullscreen-mode {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 1000;
+            overflow: hidden;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+        }
+
+        .fullscreen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+
+        .fullscreen-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .fullscreen-options {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .fullscreen-content {
+            margin: 0 auto;
+            padding: 20px;
+            font-size: 1.2rem;
+            line-height: 1.8;
+            transition: all 0.3s;
+            flex: 1;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .fullscreen-content h1,
+        .fullscreen-content h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .fullscreen-content h1 {
+            font-size: 2.5rem;
+        }
+
+        .fullscreen-content h2 {
+            font-size: 2rem;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #2c3e50;
+            color: white;
+            margin-top: auto;
+        }
+
+        @media (max-width: 968px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                max-height: 250px;
+            }
+
+            .reader-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .control-group {
+                width: 100%;
+                justify-content: center;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-controls {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .fullscreen-options {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .container {
+                height: auto;
+                min-height: 95vh;
+            }
+        }
+
+        .keyboard-hint {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            display: none;
+        }
+
+        .font-size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .font-size-slider {
+            flex: 1;
+            max-width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>Advanced PDF Reader</h1>
+                <p class="tagline">Your ultimate tool for reading and reviewing novels</p>
+            </div>
+            <div class="nav-controls">
+                <div class="nav-dropdown">
+                    <button class="dropdown-btn"><i class="fas fa-paint-brush"></i> Appearance</button>
+                    <div class="dropdown-content">
+                        <div class="option-group">
+                            <h3>Color Themes</h3>
+                            <div class="option-buttons"
+                                style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+                                <div class="theme-option active" data-theme="light">
+                                    <div class="color1" style="background: #f8f9fa;"></div>
+                                    <div class="color2" style="background: #212529;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="dark">
+                                    <div class="color1" style="background: #2c3e50;"></div>
+                                    <div class="color2" style="background: #ecf0f1;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="sepia">
+                                    <div class="color1" style="background: #f3e9d2;"></div>
+                                    <div class="color2" style="background: #5c4b37;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="blue">
+                                    <div class="color1" style="background: #3498db;"></div>
+                                    <div class="color2" style="background: #f7f9fd;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="green">
+                                    <div class="color1" style="background: #2ecc71;"></div>
+                                    <div class="color2" style="background: #1d3c2f;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="purple">
+                                    <div class="color1" style="background: #9b59b6;"></div>
+                                    <div class="color2" style="background: #f4ecf7;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="midnight">
+                                    <div class="color1" style="background: #2c3e50;"></div>
+                                    <div class="color2" style="background: #1a2530;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="sunset">
+                                    <div class="color1" style="background: #e74c3c;"></div>
+                                    <div class="color2" style="background: #fdebd0;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="forest">
+                                    <div class="color1" style="background: #27ae60;"></div>
+                                    <div class="color2" style="background: #d5f5e3;"></div>
+                                </div>
+                                <div class="theme-option" data-theme="sand">
+                                    <div class="color1" style="background: #f39c12;"></div>
+                                    <div class="color2" style="background: #fef9e7;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="option-group">
+                            <h3>Font Options</h3>
+                            <div class="option-buttons">
+                                <select id="nav-font-select" class="option-btn" style="width: 100%;">
+                                    <option value="Arial, sans-serif">Arial</option>
+                                    <option value="Georgia, serif">Georgia</option>
+                                    <option value="'Times New Roman', serif">Times New Roman</option>
+                                    <option value="Verdana, sans-serif">Verdana</option>
+                                    <option value="'Courier New', monospace">Courier New</option>
+                                    <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                    <option value="Garamond, serif">Garamond</option>
+                                    <option value="'Palatino Linotype', serif">Palatino</option>
+                                    <option value="'Book Antiqua', serif">Book Antiqua</option>
+                                    <option value="Tahoma, sans-serif">Tahoma</option>
+                                    <option value="'Century Gothic', sans-serif">Century Gothic</option>
+                                    <option value="'Lucida Sans Unicode', sans-serif">Lucida Sans</option>
+                                    <option value="'Copperplate Gothic', sans-serif">Copperplate Gothic</option>
+                                    <option value="'Franklin Gothic Medium', sans-serif">Franklin Gothic</option>
+                                    <option value="'Gill Sans', sans-serif">Gill Sans</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="option-group">
+                            <h3>Font Size</h3>
+                            <div class="font-size-control">
+                                <input type="range" min="12" max="24" value="16" class="font-size-slider"
+                                    id="nav-font-size">
+                                <span id="font-size-value">16px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nav-dropdown">
+                    <button class="dropdown-btn"><i class="fas fa-text-width"></i> Layout</button>
+                    <div class="dropdown-content">
+                        <div class="option-group">
+                            <h3>Text Alignment</h3>
+                            <div class="option-buttons">
+                                <button class="option-btn active" data-align="left"><i
+                                        class="fas fa-align-left"></i></button>
+                                <button class="option-btn" data-align="center"><i
+                                        class="fas fa-align-center"></i></button>
+                                <button class="option-btn" data-align="right"><i
+                                        class="fas fa-align-right"></i></button>
+                                <button class="option-btn" data-align="justify"><i
+                                        class="fas fa-align-justify"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="option-group">
+                            <h3>Text Width</h3>
+                            <input type="range" min="30" max="100" value="70" class="width-slider"
+                                id="nav-width-slider">
+                        </div>
+
+                        <div class="option-group">
+                            <h3>Text Position</h3>
+                            <input type="range" min="0" max="100" value="50" class="width-slider"
+                                id="nav-position-slider">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="upload-section">
+                    <input type="file" id="file-upload" accept=".pdf" multiple style="display: none;">
+                    <button class="upload-btn" id="upload-button"><i class="fas fa-upload"></i> Upload PDF
+                        Files</button>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: #ecf0f1;">Select one or more PDF files to
+                        upload</p>
+                </div>
+
+                <div class="file-list">
+                    <h3>Your Files</h3>
+                    <div id="file-items">
+                        <!-- Files will be listed here dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="reader-container">
+                <div class="reader-controls">
+                    <div class="control-group">
+                        <button class="control-btn" id="prev-btn" disabled><i class="fas fa-chevron-left"></i>
+                            Previous</button>
+                        <div class="page-info" id="page-info">No PDF loaded</div>
+                        <button class="control-btn" id="next-btn" disabled>Next <i
+                                class="fas fa-chevron-right"></i></button>
+                    </div>
+
+                    <div class="control-group">
+                        <button class="control-btn" id="fullscreen-btn"><i class="fas fa-expand"></i> Full
+                            Screen</button>
+                    </div>
+                </div>
+
+                <div class="reader-view" id="reader-view">
+                    <div class="no-pdf-message" id="no-pdf-message">
+                        <h2>No PDF File Loaded</h2>
+                        <p>Upload a PDF file using the button on the left to start reading.</p>
+                        <p>You can upload multiple files and switch between them.</p>
+                        <p class="keyboard-hint" id="keyboard-hint">Use ← and → keys to navigate between pages</p>
+                    </div>
+                    <div id="extracted-text" style="display: none;">
+                        <div class="text-content" id="text-content">
+                            <!-- Extracted text will appear here -->
+                        </div>
+                    </div>
+                    <div class="keyboard-hint" id="reader-keyboard-hint">Use ← and → keys to navigate between pages
+                    </div>
+                </div>
+
+                <div class="width-control">
+                    <label for="width-slider">Text Width:</label>
+                    <input type="range" min="30" max="100" value="70" class="width-slider" id="width-slider">
+                </div>
+
+                <div class="width-control">
+                    <label for="position-slider">Text Position:</label>
+                    <input type="range" min="0" max="100" value="50" class="width-slider" id="position-slider">
+                </div>
+
+                <div class="alignment-controls">
+                    <button class="align-btn active" data-align="left"><i class="fas fa-align-left"></i></button>
+                    <button class="align-btn" data-align="center"><i class="fas fa-align-center"></i></button>
+                    <button class="align-btn" data-align="right"><i class="fas fa-align-right"></i></button>
+                    <button class="align-btn" data-align="justify"><i class="fas fa-align-justify"></i></button>
+                </div>
+
+                <div class="font-size-control">
+                    <label for="font-size">Font Size:</label>
+                    <input type="range" min="12" max="24" value="16" class="font-size-slider" id="font-size">
+                    <span id="font-size-value-display">16px</span>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Advanced PDF Reader &copy; 2023 | Designed for Writers | Use ← → keys to navigate</p>
+        </footer>
+    </div>
+
+    <!-- Full Screen Mode -->
+    <div id="fullscreen-mode" class="fullscreen-mode">
+        <div class="fullscreen-header">
+            <h2 id="fullscreen-title">Chapter Title</h2>
+            <div class="fullscreen-controls">
+                <div class="fullscreen-options">
+                    <div class="control-group">
+                        <button class="control-btn" id="fs-prev-btn" disabled><i
+                                class="fas fa-chevron-left"></i></button>
+                        <div class="page-info" id="fs-page-info">No PDF loaded</div>
+                        <button class="control-btn" id="fs-next-btn" disabled><i
+                                class="fas fa-chevron-right"></i></button>
+                    </div>
+
+                    <select id="fs-chapter-dropdown" class="option-btn">
+                        <option value="">Select a chapter</option>
+                    </select>
+
+                    <div class="nav-dropdown">
+                        <button class="dropdown-btn"><i class="fas fa-palette"></i></button>
+                        <div class="dropdown-content">
+                            <div class="option-group">
+                                <h3>Color Themes</h3>
+                                <div class="option-buttons"
+                                    style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;">
+                                    <div class="theme-option active" data-theme="light">
+                                        <div class="color1" style="background: #f8f9fa;"></div>
+                                        <div class="color2" style="background: #212529;"></div>
+                                    </div>
+                                    <div class="theme-option" data-theme="dark">
+                                        <div class="color1" style="background: #2c3e50;"></div>
+                                        <div class="color2" style="background: #ecf0f1;"></div>
+                                    </div>
+                                    <div class="theme-option" data-theme="sepia">
+                                        <div class="color1" style="background: #f3e9d2;"></div>
+                                        <div class="color2" style="background: #5c4b37;"></div>
+                                    </div>
+                                    <div class="theme-option" data-theme="blue">
+                                        <div class="color1" style="background: #3498db;"></div>
+                                        <div class="color2" style="background: #f7f9fd;"></div>
+                                    </div>
+                                    <div class="theme-option" data-theme="green">
+                                        <div class="color1" style="background: #2ecc71;"></div>
+                                        <div class="color2" style="background: #1d3c2f;"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nav-dropdown">
+                        <button class="dropdown-btn"><i class="fas fa-text-width"></i></button>
+                        <div class="dropdown-content">
+                            <div class="option-group">
+                                <h3>Text Alignment</h3>
+                                <div class="option-buttons">
+                                    <button class="option-btn active" data-align="left"><i
+                                            class="fas fa-align-left"></i></button>
+                                    <button class="option-btn" data-align="center"><i
+                                            class="fas fa-align-center"></i></button>
+                                    <button class="option-btn" data-align="right"><i
+                                            class="fas fa-align-right"></i></button>
+                                    <button class="option-btn" data-align="justify"><i
+                                            class="fas fa-align-justify"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="option-group">
+                                <h3>Text Width</h3>
+                                <input type="range" min="30" max="100" value="70" class="width-slider"
+                                    id="fs-width-slider">
+                            </div>
+
+                            <div class="option-group">
+                                <h3>Text Position</h3>
+                                <input type="range" min="0" max="100" value="50" class="width-slider"
+                                    id="fs-position-slider">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="nav-dropdown">
+                        <button class="dropdown-btn"><i class="fas fa-font"></i></button>
+                        <div class="dropdown-content">
+                            <div class="option-group">
+                                <h3>Font Options</h3>
+                                <div class="option-buttons">
+                                    <select id="fs-font-select" class="option-btn" style="width: 100%;">
+                                        <option value="Arial, sans-serif">Arial</option>
+                                        <option value="Georgia, serif">Georgia</option>
+                                        <option value="'Times New Roman', serif">Times New Roman</option>
+                                        <option value="Verdana, sans-serif">Verdana</option>
+                                        <option value="'Courier New', monospace">Courier New</option>
+                                        <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+                                        <option value="Garamond, serif">Garamond</option>
+                                        <option value="'Palatino Linotype', serif">Palatino</option>
+                                        <option value="'Book Antiqua', serif">Book Antiqua</option>
+                                        <option value="Tahoma, sans-serif">Tahoma</option>
+                                        <option value="'Century Gothic', sans-serif">Century Gothic</option>
+                                        <option value="'Lucida Sans Unicode', sans-serif">Lucida Sans</option>
+                                        <option value="'Copperplate Gothic', sans-serif">Copperplate Gothic</option>
+                                        <option value="'Franklin Gothic Medium', sans-serif">Franklin Gothic</option>
+                                        <option value="'Gill Sans', sans-serif">Gill Sans</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="option-group">
+                                <h3>Font Size</h3>
+                                <div class="font-size-control">
+                                    <input type="range" min="12" max="24" value="16" class="font-size-slider"
+                                        id="fs-font-size">
+                                    <span id="fs-font-size-value">16px</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="control-btn" id="exit-fullscreen"><i class="fas fa-compress"></i> Exit</button>
+            </div>
+        </div>
+        <div class="fullscreen-content" id="fullscreen-content">
+            <!-- Full screen content will appear here -->
+        </div>
+        <div class="keyboard-hint" style="position: fixed; bottom: 20px; right: 20px;">Use ← and → keys to navigate
+            between pages</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Set up PDF.js worker
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.worker.min.js';
+
+            // Elements
+            const uploadButton = document.getElementById('upload-button');
+            const fileUpload = document.getElementById('file-upload');
+            const fileItemsContainer = document.getElementById('file-items');
+            const noPdfMessage = document.getElementById('no-pdf-message');
+            const extractedText = document.getElementById('extracted-text');
+            const textContent = document.getElementById('text-content');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const pageInfo = document.getElementById('page-info');
+            const readerView = document.getElementById('reader-view');
+            const fullscreenBtn = document.getElementById('fullscreen-btn');
+            const fullscreenMode = document.getElementById('fullscreen-mode');
+            const fullscreenContent = document.getElementById('fullscreen-content');
+            const fullscreenTitle = document.getElementById('fullscreen-title');
+            const exitFullscreenBtn = document.getElementById('exit-fullscreen');
+            const fsPrevBtn = document.getElementById('fs-prev-btn');
+            const fsNextBtn = document.getElementById('fs-next-btn');
+            const fsPageInfo = document.getElementById('fs-page-info');
+            const widthSlider = document.getElementById('width-slider');
+            const fsWidthSlider = document.getElementById('fs-width-slider');
+            const positionSlider = document.getElementById('position-slider');
+            const fsPositionSlider = document.getElementById('fs-position-slider');
+            const alignButtons = document.querySelectorAll('.align-btn');
+            const fsChapterDropdown = document.getElementById('fs-chapter-dropdown');
+            const themeOptions = document.querySelectorAll('.theme-option');
+            const navFontSelect = document.getElementById('nav-font-select');
+            const fsFontSelect = document.getElementById('fs-font-select');
+            const fontSizeSlider = document.getElementById('font-size');
+            const fsFontSizeSlider = document.getElementById('fs-font-size');
+            const fontSizeValue = document.getElementById('font-size-value-display');
+            const fsFontSizeValue = document.getElementById('fs-font-size-value');
+            const navFontSize = document.getElementById('nav-font-size');
+            const navWidthSlider = document.getElementById('nav-width-slider');
+            const navPositionSlider = document.getElementById('nav-position-slider');
+            const navAlignButtons = document.querySelectorAll('[data-align]');
+            const keyboardHint = document.getElementById('keyboard-hint');
+            const readerKeyboardHint = document.getElementById('reader-keyboard-hint');
+
+            // State
+            let currentPdfFile = null;
+            let currentPage = 1;
+            let totalPages = 0;
+            let pdfDocument = null;
+            let isFullscreen = false;
+            const uploadedFiles = [];
+            const textCache = {};
+
+            // Show keyboard hint on initial load
+            keyboardHint.style.display = 'block';
+            setTimeout(() => {
+                keyboardHint.style.display = 'none';
+            }, 5000);
+
+            // Upload button functionality
+            uploadButton.addEventListener('click', function () {
+                fileUpload.click();
+            });
+
+            // Handle file selection
+            fileUpload.addEventListener('change', function (e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    // Process each selected file
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        if (file.type === 'application/pdf') {
+                            // Add to our uploaded files list
+                            if (!uploadedFiles.some(f => f.name === file.name)) {
+                                uploadedFiles.push(file);
+
+                                // Create file item in the sidebar
+                                const fileItem = document.createElement('div');
+                                fileItem.className = 'file-item';
+                                fileItem.dataset.fileName = file.name;
+                                fileItem.innerHTML = `
+                                    <span>${file.name}</span>
+                                    <button class="remove-btn">×</button>
+                                `;
+
+                                // Add click event to load the PDF
+                                fileItem.addEventListener('click', function (e) {
+                                    if (e.target.classList.contains('remove-btn')) return;
+
+                                    // Remove active class from all items
+                                    document.querySelectorAll('.file-item').forEach(item => {
+                                        item.classList.remove('active');
+                                    });
+
+                                    // Add active class to clicked item
+                                    fileItem.classList.add('active');
+
+                                    // Load the PDF
+                                    loadPdfFile(file);
+                                });
+
+                                // Add remove button functionality
+                                const removeBtn = fileItem.querySelector('.remove-btn');
+                                removeBtn.addEventListener('click', function (e) {
+                                    e.stopPropagation();
+                                    removeFile(file.name);
+                                });
+
+                                fileItemsContainer.appendChild(fileItem);
+
+                                // Update chapter dropdown
+                                updateChapterDropdown();
+
+                                // If this is the first file, load it automatically
+                                if (uploadedFiles.length === 1) {
+                                    fileItem.classList.add('active');
+                                    loadPdfFile(file);
+                                }
+                            }
+                        }
+                    }
+
+                    // Reset the file input
+                    fileUpload.value = '';
+                }
+            });
+
+            // Load a PDF file and extract text
+            function loadPdfFile(file) {
+                currentPdfFile = file;
+                const fileURL = URL.createObjectURL(file);
+
+                // Show the extracted text and hide the message
+                extractedText.style.display = 'block';
+                noPdfMessage.style.display = 'none';
+
+                // Load the PDF document
+                pdfjsLib.getDocument(fileURL).promise.then(function (pdf) {
+                    pdfDocument = pdf;
+                    totalPages = pdf.numPages;
+                    currentPage = 1;
+
+                    // Load the first page
+                    loadPage(1);
+
+                    // Enable navigation buttons
+                    prevBtn.disabled = false;
+                    nextBtn.disabled = false;
+                    fsPrevBtn.disabled = false;
+                    fsNextBtn.disabled = false;
+
+                    // Show keyboard hint
+                    readerKeyboardHint.style.display = 'block';
+                    setTimeout(() => {
+                        readerKeyboardHint.style.display = 'none';
+                    }, 5000);
+                }).catch(function (error) {
+                    console.error('Error loading PDF:', error);
+                    textContent.innerHTML = '<p>Error loading PDF. Please try another file.</p>';
+                });
+            }
+
+            // Load a specific page and extract text
+            function loadPage(pageNum) {
+                if (textCache[`${currentPdfFile.name}-${pageNum}`]) {
+                    // Use cached text
+                    displayText(textCache[`${currentPdfFile.name}-${pageNum}`], pageNum);
+                    return;
+                }
+
+                pdfDocument.getPage(pageNum).then(function (page) {
+                    page.getTextContent().then(function (textContent) {
+                        // Combine all text items
+                        let text = '';
+                        let lastY = null;
+                        let isFirstLine = true;
+                        let isSecondLine = false;
+
+                        for (let i = 0; i < textContent.items.length; i++) {
+                            const item = textContent.items[i];
+
+                            // Check if we're on a new line
+                            if (lastY !== item.transform[5]) {
+                                if (lastY !== null) {
+                                    text += '</p>';
+                                    if (isFirstLine) {
+                                        isFirstLine = false;
+                                        isSecondLine = true;
+                                    } else if (isSecondLine) {
+                                        isSecondLine = false;
+                                    }
+                                }
+                                text += '<p>';
+                                lastY = item.transform[5];
+
+                                // Apply heading styles to first two lines
+                                if (isFirstLine) {
+                                    text = text.slice(0, -3) + '<h1>';
+                                } else if (isSecondLine) {
+                                    text = text.slice(0, -3) + '<h2>';
+                                }
+                            }
+
+                            // Add the text
+                            text += item.str + ' ';
+                        }
+
+                        text += '</p>';
+
+                        // Close any open heading tags
+                        if (text.includes('<h1>') && !text.includes('</h1>')) {
+                            text = text.replace('<h1>', ''); // Remove if not properly structured
+                        }
+                        if (text.includes('<h2>') && !text.includes('</h2>')) {
+                            text = text.replace('<h2>', ''); // Remove if not properly structured
+                        }
+
+                        // Cache the text
+                        textCache[`${currentPdfFile.name}-${pageNum}`] = text;
+
+                        // Display the text
+                        displayText(text, pageNum);
+                    });
+                });
+            }
+
+            // Display extracted text with proper formatting
+            function displayText(text, pageNum) {
+                document.getElementById('text-content').innerHTML = text;
+                document.getElementById('fullscreen-content').innerHTML = text;
+
+                // Apply current font
+                applyFont(isFullscreen ? fsFontSelect.value : navFontSelect.value);
+
+                // Apply current font size
+                applyFontSize(isFullscreen ? fsFontSizeSlider.value : fontSizeSlider.value);
+
+                // Update page info
+                updatePageInfo();
+            }
+
+            // Update page information display
+            function updatePageInfo() {
+                pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                fsPageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+            }
+
+            // Remove a file from the list
+            function removeFile(fileName) {
+                // Remove from uploaded files array
+                const index = uploadedFiles.findIndex(f => f.name === fileName);
+                if (index !== -1) {
+                    uploadedFiles.splice(index, 1);
+                }
+
+                // Remove from DOM
+                const fileItem = document.querySelector(`.file-item[data-file-name="${fileName}"]`);
+                if (fileItem) {
+                    fileItem.remove();
+                }
+
+                // Update chapter dropdown
+                updateChapterDropdown();
+
+                // If we removed the currently active PDF
+                if (currentPdfFile && currentPdfFile.name === fileName) {
+                    if (uploadedFiles.length > 0) {
+                        // Load the first available PDF
+                        const firstFileItem = document.querySelector('.file-item');
+                        if (firstFileItem) {
+                            firstFileItem.classList.add('active');
+                            const file = uploadedFiles.find(f => f.name === firstFileItem.dataset.fileName);
+                            if (file) loadPdfFile(file);
+                        }
+                    } else {
+                        // No PDFs left, show the message
+                        extractedText.style.display = 'none';
+                        noPdfMessage.style.display = 'block';
+                        pageInfo.textContent = 'No PDF loaded';
+                        fsPageInfo.textContent = 'No PDF loaded';
+                        prevBtn.disabled = true;
+                        nextBtn.disabled = true;
+                        fsPrevBtn.disabled = true;
+                        fsNextBtn.disabled = true;
+                        currentPdfFile = null;
+                    }
+                }
+            }
+
+            // Update chapter dropdown
+            function updateChapterDropdown() {
+                fsChapterDropdown.innerHTML = '<option value="">Select a chapter</option>';
+
+                uploadedFiles.forEach((file, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = file.name.replace('.pdf', '');
+                    fsChapterDropdown.appendChild(option);
+                });
+            }
+
+            // Navigation buttons
+            prevBtn.addEventListener('click', goToPrevPage);
+            nextBtn.addEventListener('click', goToNextPage);
+            fsPrevBtn.addEventListener('click', goToPrevPage);
+            fsNextBtn.addEventListener('click', goToNextPage);
+
+            function goToPrevPage() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadPage(currentPage);
+                }
+            }
+
+            function goToNextPage() {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    loadPage(currentPage);
+                }
+            }
+
+            // Keyboard navigation
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'ArrowLeft') {
+                    goToPrevPage();
+                } else if (e.key === 'ArrowRight') {
+                    goToNextPage();
+                }
+            });
+
+            // Full screen functionality
+            fullscreenBtn.addEventListener('click', function () {
+                if (currentPdfFile) {
+                    fullscreenMode.style.display = 'flex';
+                    fullscreenTitle.textContent = currentPdfFile.name.replace('.pdf', '');
+                    document.body.style.overflow = 'hidden';
+                    isFullscreen = true;
+
+                    // Sync settings with main view
+                    fsFontSelect.value = navFontSelect.value;
+                    fsWidthSlider.value = widthSlider.value;
+                    fsPositionSlider.value = positionSlider.value;
+                    fsFontSizeSlider.value = fontSizeSlider.value;
+                    applyWidth(fsWidthSlider.value, true);
+                    applyPosition(fsPositionSlider.value, true);
+                    applyFont(fsFontSelect.value);
+                    applyFontSize(fsFontSizeSlider.value);
+                }
+            });
+
+            exitFullscreenBtn.addEventListener('click', function () {
+                fullscreenMode.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                isFullscreen = false;
+            });
+
+            // Theme selection
+            themeOptions.forEach(option => {
+                option.addEventListener('click', function () {
+                    // Remove active class from all options
+                    document.querySelectorAll('.theme-option').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+
+                    // Add active class to clicked option
+                    this.classList.add('active');
+
+                    // Apply theme
+                    const theme = this.dataset.theme;
+                    applyTheme(theme);
+                });
+            });
+
+            // Apply theme
+            function applyTheme(theme) {
+                if (isFullscreen) {
+                    switch (theme) {
+                        case 'light':
+                            fullscreenMode.style.background = '#f8f9fa';
+                            fullscreenContent.style.color = '#212529';
+                            break;
+                        case 'dark':
+                            fullscreenMode.style.background = '#2c3e50';
+                            fullscreenContent.style.color = '#ecf0f1';
+                            break;
+                        case 'sepia':
+                            fullscreenMode.style.background = '#f3e9d2';
+                            fullscreenContent.style.color = '#5c4b37';
+                            break;
+                        case 'blue':
+                            fullscreenMode.style.background = '#3498db';
+                            fullscreenContent.style.color = '#f7f9fd';
+                            break;
+                        case 'green':
+                            fullscreenMode.style.background = '#2ecc71';
+                            fullscreenContent.style.color = '#1d3c2f';
+                            break;
+                        case 'purple':
+                            fullscreenMode.style.background = '#9b59b6';
+                            fullscreenContent.style.color = '#f4ecf7';
+                            break;
+                        case 'midnight':
+                            fullscreenMode.style.background = '#2c3e50';
+                            fullscreenContent.style.color = '#1a2530';
+                            break;
+                        case 'sunset':
+                            fullscreenMode.style.background = '#e74c3c';
+                            fullscreenContent.style.color = '#fdebd0';
+                            break;
+                        case 'forest':
+                            fullscreenMode.style.background = '#27ae60';
+                            fullscreenContent.style.color = '#d5f5e3';
+                            break;
+                        case 'sand':
+                            fullscreenMode.style.background = '#f39c12';
+                            fullscreenContent.style.color = '#fef9e7';
+                            break;
+                    }
+                } else {
+                    switch (theme) {
+                        case 'light':
+                            readerView.style.background = '#f0f0f0';
+                            extractedText.style.background = 'white';
+                            extractedText.style.color = '#333';
+                            break;
+                        case 'dark':
+                            readerView.style.background = '#2c3e50';
+                            extractedText.style.background = '#34495e';
+                            extractedText.style.color = '#ecf0f1';
+                            break;
+                        case 'sepia':
+                            readerView.style.background = '#f3e9d2';
+                            extractedText.style.background = '#faf3e6';
+                            extractedText.style.color = '#5c4b37';
+                            break;
+                        case 'blue':
+                            readerView.style.background = '#3498db';
+                            extractedText.style.background = '#aed6f1';
+                            extractedText.style.color = '#1a5276';
+                            break;
+                        case 'green':
+                            readerView.style.background = '#2ecc71';
+                            extractedText.style.background = '#d5f5e3';
+                            extractedText.style.color = '#145a32';
+                            break;
+                        case 'purple':
+                            readerView.style.background = '#9b59b6';
+                            extractedText.style.background = '#e8daef';
+                            extractedText.style.color = '#4a235a';
+                            break;
+                        case 'midnight':
+                            readerView.style.background = '#2c3e50';
+                            extractedText.style.background = '#1a252f';
+                            extractedText.style.color = '#ecf0f1';
+                            break;
+                        case 'sunset':
+                            readerView.style.background = '#e74c3c';
+                            extractedText.style.background = '#fadbd8';
+                            extractedText.style.color = '#922b21';
+                            break;
+                        case 'forest':
+                            readerView.style.background = '#27ae60';
+                            extractedText.style.background = '#d5f5e3';
+                            extractedText.style.color = '#145a32';
+                            break;
+                        case 'sand':
+                            readerView.style.background = '#f39c12';
+                            extractedText.style.background = '#fef9e7';
+                            extractedText.style.color = '#7e5109';
+                            break;
+                    }
+                }
+            }
+
+            // Font selection
+            navFontSelect.addEventListener('change', function () {
+                applyFont(this.value);
+            });
+
+            fsFontSelect.addEventListener('change', function () {
+                applyFont(this.value);
+            });
+
+            function applyFont(font) {
+                textContent.style.fontFamily = font;
+                fullscreenContent.style.fontFamily = font;
+            }
+
+            // Font size selection
+            fontSizeSlider.addEventListener('input', function () {
+                applyFontSize(this.value);
+                fontSizeValue.textContent = this.value + 'px';
+            });
+
+            fsFontSizeSlider.addEventListener('input', function () {
+                applyFontSize(this.value);
+                fsFontSizeValue.textContent = this.value + 'px';
+            });
+
+            navFontSize.addEventListener('input', function () {
+                applyFontSize(this.value);
+            });
+
+            function applyFontSize(size) {
+                textContent.style.fontSize = size + 'px';
+                fullscreenContent.style.fontSize = (parseInt(size) + 4) + 'px'; // Slightly larger in fullscreen
+            }
+
+            // Width sliders
+            widthSlider.addEventListener('input', function () {
+                applyWidth(this.value, false);
+            });
+
+            fsWidthSlider.addEventListener('input', function () {
+                applyWidth(this.value, true);
+            });
+
+            navWidthSlider.addEventListener('input', function () {
+                applyWidth(this.value, isFullscreen);
+            });
+
+            function applyWidth(width, isFs) {
+                if (isFs) {
+                    fullscreenContent.style.width = `${width}%`;
+                } else {
+                    extractedText.style.width = `${width}%`;
+                }
+            }
+
+            // Position sliders
+            positionSlider.addEventListener('input', function () {
+                applyPosition(this.value, false);
+            });
+
+            fsPositionSlider.addEventListener('input', function () {
+                applyPosition(this.value, true);
+            });
+
+            navPositionSlider.addEventListener('input', function () {
+                applyPosition(this.value, isFullscreen);
+            });
+
+            function applyPosition(position, isFs) {
+                if (isFs) {
+                    if (position < 50) {
+                        fullscreenContent.style.marginLeft = '0';
+                        fullscreenContent.style.marginRight = 'auto';
+                        fullscreenContent.style.transform = `translateX(${(50 - position) / 50 * 10}%)`;
+                    } else if (position > 50) {
+                        fullscreenContent.style.marginLeft = 'auto';
+                        fullscreenContent.style.marginRight = '0';
+                        fullscreenContent.style.transform = `translateX(-${(position - 50) / 50 * 10}%)`;
+                    } else {
+                        fullscreenContent.style.margin = '0 auto';
+                        fullscreenContent.style.transform = 'translateX(0)';
+                    }
+                } else {
+                    if (position < 50) {
+                        extractedText.style.marginLeft = '0';
+                        extractedText.style.marginRight = 'auto';
+                        extractedText.style.transform = `translateX(${(50 - position) / 50 * 10}%)`;
+                    } else if (position > 50) {
+                        extractedText.style.marginLeft = 'auto';
+                        extractedText.style.marginRight = '0';
+                        extractedText.style.transform = `translateX(-${(position - 50) / 50 * 10}%)`;
+                    } else {
+                        extractedText.style.margin = '0 auto';
+                        extractedText.style.transform = 'translateX(0)';
+                    }
+                }
+            }
+
+            // Alignment buttons
+            alignButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    alignButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    applyAlignment(this.dataset.align);
+                });
+            });
+
+            navAlignButtons.forEach(button => {
+                button.addEventListener('click', function () {
+                    document.querySelectorAll('[data-align]').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    applyAlignment(this.dataset.align);
+                });
+            });
+
+            function applyAlignment(align) {
+                textContent.style.textAlign = align;
+                fullscreenContent.style.textAlign = align;
+            }
+
+            // Chapter dropdown selection
+            fsChapterDropdown.addEventListener('change', function () {
+                const selectedIndex = parseInt(this.value);
+                if (!isNaN(selectedIndex) && uploadedFiles[selectedIndex]) {
+                    // Find and click the corresponding file item
+                    const fileItem = document.querySelector(`.file-item[data-file-name="${uploadedFiles[selectedIndex].name}"]`);
+                    if (fileItem) {
+                        fileItem.click();
+                    }
+                }
+            });
+
+            // Initialize font size display
+            fontSizeValue.textContent = fontSizeSlider.value + 'px';
+            fsFontSizeValue.textContent = fsFontSizeSlider.value + 'px';
+        });
+    </script>
+</body>
+
+</html>
